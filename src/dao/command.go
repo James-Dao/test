@@ -8,34 +8,25 @@ import (
 	"model"
 	"os/exec"
 	"strings"
-	"sync"
-	"time"
 )
 
 type CommandService struct {
-	conf           *config.Config
-	bufferDuration time.Duration
-	lastWrite      time.Time
-	lock           sync.Mutex
-	readyToFlush   func() bool
-	points         []*model.Command
+	conf   *config.Config
+	points []*model.Command
 }
 
 func NewCommandService(conf *config.Config) *CommandService {
 	i := &CommandService{
-		conf:           conf,
-		bufferDuration: time.Duration(60 * time.Second),
-		lastWrite:      time.Now(),
-		points:         make([]*model.Command, 0),
+		conf:   conf,
+		points: make([]*model.Command, 0),
 	}
-	i.readyToFlush = i.defaultReadyToFlush
 	return i
 }
 
 func (i *CommandService) Run() error {
 	log.Infof("%s", "CommandService Run")
 	//cmd := "sysdig -pc -c /gopath/app/bin/containercommand | awk '{for(i=1;i<=NF;i++) printf\"%s \",$i} {print \"\"}'"
-	cmd := "sysdig -pc -c /gopath/app/bin/containercommand"
+	cmd := "sysdig -pc -c /gopath/app/bin/all"
 	input := exec.Command("/bin/sh", "-c", cmd)
 	input_pipe, err := input.StdoutPipe()
 	if err != nil {
@@ -66,18 +57,6 @@ func (i *CommandService) Run() error {
 			command.Level = "container"
 			i.points = append(i.points, command)
 		}
-		if i.readyToFlush() {
-			pointsToFlush := i.points
-			i.points = make([]*model.Command, 0)
-			i.lastWrite = time.Now()
-			if len(pointsToFlush) > 0 {
-				fmt.Println(fmt.Sprintf("= start to flush point to storage, point size= [ %d ]", len(pointsToFlush)))
-				points := make([]model.Command, len(pointsToFlush))
-				for i, p := range pointsToFlush {
-					points[i] = *p
-				}
-			}
-		}
 	}
 	err = scanner.Err()
 	if err != nil {
@@ -85,8 +64,4 @@ func (i *CommandService) Run() error {
 	}
 	log.Info("Exit Scanner")
 	return nil
-}
-
-func (i *CommandService) defaultReadyToFlush() bool {
-	return time.Since(i.lastWrite) >= i.bufferDuration
 }
