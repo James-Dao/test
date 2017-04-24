@@ -1,14 +1,12 @@
 package main
 
 import (
-	"common"
 	"config"
 	"dao"
 	"flag"
 	"fmt"
 	"github.com/codegangsta/cli"
 	"github.com/gin-gonic/gin"
-	"logger"
 	"net/http"
 	"os"
 	"time"
