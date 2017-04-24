@@ -11,12 +11,20 @@ terminal = require "ansiterminal"
 require "httppackage"
 
 grtable = {}
+grtable_memory = {}
+grtable_process = {}
+grtable_process_memory = {}
+grtable_thread = {}
 grtable_net = {}
 grtable_file = {}
 grtable_errors = {}
 grtable_fdcount = {}
 islive = false
 fkeys = {}
+fkeys_memory = {}
+fkeys_process = {}
+fkeys_process_memory = {}
+fkeys_thread = {}
 fkeys_net = {}
 fkeys_file = {}
 fkeys_fdcount = {}
@@ -36,6 +44,51 @@ partial_transactions = {}
 
 vizinfo =
 {
+  key_fld = {"container.name"},
+  key_desc = {"Container.name"},
+  value_fld = "thread.exectime",
+  value_desc = "CPU",
+  value_units = "timepct",
+  top_number = 1000,
+  output_format = "normal"
+}
+
+vizinfo_memory =
+{
+  key_fld = {"thread.vmsize","thread.vmrss","container.name"},
+  key_desc = {"VIRT","RES","Container.name"},
+  value_fld = "thread.exectime",
+  value_desc = "CPU",
+  value_units = "timepct",
+  top_number = 1000,
+  output_format = "normal"
+}
+
+
+vizinfo_process =
+{
+  key_fld = {"proc.name","user.name","proc.nthreads","proc.pid","thread.vmsize","thread.vmrss","evt.cpu","container.id","container.name"},
+  key_desc = {"Process","User","ThreadCount","Host_pid","VIRT","RES","Cpu_No","Container.id","Container.name"},
+  value_fld = "thread.exectime",
+  value_desc = "CPU",
+  value_units = "timepct",
+  top_number = 1000,
+  output_format = "normal"
+}
+
+vizinfo_process_memory =
+{
+  key_fld = {"proc.name","user.name","proc.nthreads","proc.pid","thread.vmsize","thread.vmrss","evt.cpu","container.id","container.name"},
+  key_desc = {"Process","User","ThreadCount","Host_pid","VIRT","RES","Cpu_No","Container.id","Container.name"},
+  value_fld = "thread.exectime",
+  value_desc = "CPU",
+  value_units = "timepct",
+  top_number = 1000,
+  output_format = "normal"
+}
+
+vizinfo_thread =
+{
   key_fld = {"proc.name","user.name","proc.nthreads","proc.pid","thread.tid","proc.vpid","thread.vmsize","thread.vmrss","evt.cpu","container.id","container.name"},
   key_desc = {"Process","User","ThreadCount","Host_pid","ThreadId","Container_pid","VIRT","RES","Cpu_No","Container.id","Container.name"},
   value_fld = "thread.exectime",
@@ -47,8 +100,8 @@ vizinfo =
 
 vizinfo_net =
 {
-  key_fld = {"fd.name","proc.name","proc.pid","proc.vpid","fd.sport","fd.sproto","evt.count","container.id","container.name"},
-  key_desc = {"Connection","Process","Host_pid","Container_pid","Server_Port","PROTO","IOPS","Container.id","Container.name"},
+  key_fld = {"fd.name","proc.name","evt.count","container.name"},
+  key_desc = {"Connection","Process","IOPS","Container.name"},
   value_fld = "evt.rawarg.res",
   value_desc = "Net",
   value_units = "bytes",
@@ -58,8 +111,8 @@ vizinfo_net =
 
 vizinfo_file =
 {
-  key_fld = {"proc.name","proc.pid","proc.vpid","thread.vmsize","thread.vmrss","container.id","container.name"},
-  key_desc = {"Process","Host_pid","Container_pid","VIRT","RES","Container.id","Container.name"},
+  key_fld = {"proc.name","container.name"},
+  key_desc = {"Process","Container.name"},
   value_fld = "evt.rawarg.res",
   value_desc = "Bytes",
   value_units = "bytes",
@@ -69,8 +122,8 @@ vizinfo_file =
 
 vizinfo_fdcount =
 {
-  key_fld = {"proc.name","proc.pid","proc.vpid","proc.fdlimit","proc.fdusage","container.id","container.name","proc.exeline"},
-  key_desc = {"Process","Host_pid","Container_pid","Max","PCT","Container.id","Container.name","Command"},
+  key_fld = {"proc.name","proc.fdlimit","proc.fdusage","container.name"},
+  key_desc = {"Process","Max","PCT","Container.name"},
   value_fld = "proc.fdopencount",
   value_desc = "Open",
   value_units = "none",
@@ -80,8 +133,8 @@ vizinfo_fdcount =
 
 vizinfo_errors =
 {
-  key_fld = {"proc.name","proc.pid","proc.vpid","container.id","container.name"},
-  key_desc = {"Process","Host_pid","Container_pid","Container.id","Container.name"},
+  key_fld = {"proc.name","container.name"},
+  key_desc = {"Process","Container.name"},
   value_fld = "evt.count",
   value_desc = "#Errors",
   value_units = "none",
@@ -110,6 +163,22 @@ function on_init()
     fkeys[i] = chisel.request_field(name)
   end
 
+   for i_memory, name_memory in ipairs(vizinfo_memory.key_fld) do
+    fkeys_memory[i_memory] = chisel.request_field(name_memory)
+  end
+
+  for i_process, name_process in ipairs(vizinfo_process.key_fld) do
+    fkeys_process[i_process] = chisel.request_field(name_process)
+  end
+
+  for i_process_memory, name_process_memory in ipairs(vizinfo_process_memory.key_fld) do
+    fkeys_process_memory[i_process_memory] = chisel.request_field(name_process_memory)
+  end
+
+  for i_thread, name_thread in ipairs(vizinfo_thread.key_fld) do
+    fkeys_thread[i_thread] = chisel.request_field(name_thread)
+  end
+
   for i_net, name_net in ipairs(vizinfo_net.key_fld) do
     fkeys_net[i_net] = chisel.request_field(name_net)
   end
@@ -128,12 +197,17 @@ function on_init()
 
   -- Request the fields we need
   fvalue = chisel.request_field(vizinfo.value_fld)
+  fvalue_process = chisel.request_field(vizinfo_process.value_fld)
+  fvalue_thread = chisel.request_field(vizinfo_thread.value_fld)
   fvalue_net = chisel.request_field(vizinfo_net.value_fld)
   fvalue_file = chisel.request_field(vizinfo_file.value_fld)
   fvalue_fdcount = chisel.request_field(vizinfo_fdcount.value_fld)
   fvalue_errors = chisel.request_field(vizinfo_errors.value_fld)
 
   fcpu = chisel.request_field("thread.cpu")
+  fcpu_memory = chisel.request_field("thread.cpu")
+  fcpu_process = chisel.request_field("thread.cpu")
+  fcpu_thread = chisel.request_field("thread.cpu") 
   eventtype = chisel.request_field("evt.type")
   fdtype = chisel.request_field("fd.type")
   evtisio = chisel.request_field("evt.is_io")
@@ -161,6 +235,11 @@ function on_init()
   data = chisel.request_field("evt.arg[1]")
 
   fdsport = chisel.request_field("fd.sport")  
+  mem_virt= chisel.request_field("thread.vmsize")
+  mem_res= chisel.request_field("thread.vmrss")
+
+  process_mem_virt= chisel.request_field("thread.vmsize")
+  process_mem_res= chisel.request_field("thread.vmrss")
 
   http_init()
 
@@ -196,7 +275,7 @@ end
 
 -- Final chisel initialization
 function on_capture_start()
-  chisel.set_interval_s(1)
+  chisel.set_interval_s(10)
   return true
 end
 
@@ -210,13 +289,13 @@ function aggregate_grtable()
             for _, tr in ipairs(transactions) do
                 total_time = total_time + tr["response"]["ts"] - tr["request"]["ts"]
             end
-            grtable_httprequest[key] = format_bytes(total_bytes) .. "             " .. format_time_interval(total_time / #transactions)
+            grtable_httprequest[key] = total_bytes .. "             " .. total_time / #transactions
     end
 end
 
 -- Event parsing callback
 function on_event()
-  -- CPU
+  -- Container CPU
   if evt.field(eventtype) == "procinfo" then
     local key = nil
     local kv = nil
@@ -242,6 +321,115 @@ function on_event()
       grtable[key] = grtable[key] + (cpu * 10000000)
     end
   end
+
+  -- Container Memory
+  if evt.field(mem_virt) ~= nil and evt.field(mem_virt) > 0 and evt.field(mem_res) ~= nil and evt.field(mem_res) > 0 and  evt.field(eventtype) == "procinfo" then
+    local key_memory = nil
+    local kv_memory = nil
+
+    for i_memory, fld_memory in ipairs(fkeys_memory) do
+      kv_memory = evt.field(fld_memory)
+      if kv_memory == nil then
+        return
+      end
+
+      if key_memory == nil then
+        key_memory = kv_memory
+      else
+        key_memory = key_memory .. "\001\001" .. evt.field(fld_memory)
+      end
+    end
+
+    local cpu_memory = evt.field(fcpu_memory)
+
+    if grtable_memory[key_memory] == nil then
+      grtable_memory[key_memory] = cpu_memory * 10000000
+    else
+      grtable_memory[key_memory] = grtable_memory[key_memory] + (cpu_memory * 10000000)
+    end
+  end
+
+  -- Process CPU
+  if evt.field(eventtype) == "procinfo" then
+    local key_process = nil
+    local kv_process = nil
+
+    for i_process, fld_process in ipairs(fkeys_process) do
+      kv_process = evt.field(fld_process)
+      if kv_process == nil then
+        return
+      end
+
+      if key_process == nil then
+        key_process = kv_process
+      else
+        key_process = key_process .. "\001\001" .. evt.field(fld_process)
+      end
+    end
+
+    local cpu_process = evt.field(fcpu_process)
+
+    if grtable_process[key_process] == nil then
+      grtable_process[key_process] = cpu_process * 10000000
+    else
+      grtable_process[key_process] = grtable_process[key_process] + (cpu_process * 10000000)
+    end
+  end
+
+  -- Process Mempry
+  if evt.field(process_mem_virt) ~= nil and evt.field(process_mem_virt) > 0 and evt.field(process_mem_res) ~= nil and evt.field(process_mem_res) > 0 and  evt.field(eventtype) == "procinfo" then
+    local key_process_memory = nil
+    local kv_process_memory = nil
+
+    for i_process_memory, fld_process_memory in ipairs(fkeys_process_memory) do
+      kv_process_memory = evt.field(fld_process_memory)
+      if kv_process_memory == nil then
+        return
+      end
+
+      if key_process_memory == nil then
+        key_process_memory = kv_process_memory
+      else
+        key_process_memory = key_process_memory .. "\001\001" .. evt.field(fld_process_memory)
+      end
+    end
+
+    local cpu_process_memory = evt.field(fcpu_process)
+
+    if grtable_process_memory[key_process_memory] == nil then
+      grtable_process_memory[key_process_memory] = cpu_process_memory * 10000000
+    else
+      grtable_process_memory[key_process_memory] = grtable_process[key_process_memory] + (cpu_process_memory * 10000000)
+    end
+  end
+
+
+  -- Thread CPU/Mempry
+  if evt.field(eventtype) == "procinfo" then
+    local key_thread = nil
+    local kv_thread = nil
+
+    for i_thread, fld_thread in ipairs(fkeys_thread) do
+      kv_thread = evt.field(fld_thread)
+      if kv_thread == nil then
+        return
+      end
+
+      if key_thread == nil then
+        key_thread = kv_thread
+      else
+        key_thread = key_thread .. "\001\001" .. evt.field(fld_thread)
+      end
+    end
+
+    local cpu_thread = evt.field(fcpu_thread)
+
+    if grtable_thread[key_thread] == nil then
+      grtable_thread[key_thread] = cpu_thread * 10000000
+    else
+      grtable_thread[key_thread] = grtable_thread[key_thread] + (cpu_thread * 10000000)
+    end
+  end
   
   --NET
   if (evt.field(fdtype) == "ipv4" or evt.field(fdtype) == "ipv6") and evt.field(evtisio) == true then
@@ -259,7 +447,7 @@ function on_event()
         totout = totout + bytes
       end
     end
-    netbytes = "NetBytes" .. "     " .. containerid_net .. "      " .. containername_net  .. "     " .. fdfilename_value .. "                         "  .. fdl4proto_value .. "       " .. "       " .. format_bytes(totin) .. "        " .. format_bytes(totout) .. "       " .. format_bytes(tot)
+    netbytes = "NetBytes" .. "     " .. containerid_net .. "      " .. containername_net  .. "     " .. fdfilename_value .. "                         "  .. fdl4proto_value .. "       " .. "       " .. totin .. "        " .. totout .. "       " .. tot
     
     local key_net = nil
     local kv_net = nil
@@ -354,40 +542,8 @@ function on_event()
     end
   end
 
-  --ERRORS
-  if evt.field(evtfailed) == true then
-    local key_errors = nil
-    local kv_errors = nil
-
-    for i_errors, fld_errors in ipairs(fkeys_errors) do
-      kv_errors = evt.field(fld_errors)
-      if kv_errors == nil then
-        return
-      end
-
-      if key_errors == nil then
-        key_errors = kv_errors
-      else
-        key_errors = key_errors .. "\001\001" .. evt.field(fld_errors)
-      end
-    end
-
-    value_errors = evt.field(fvalue_errors)
-
-    if value_errors ~= nil and value_errors > 0 then
-      entryval_errors = grtable_errors[key_errors]
-
-      if entryval_errors == nil then
-        grtable_errors[key_errors] = value_errors
-      else
-        grtable_errors[key_errors] = grtable_errors[key_errors] + value_errors
-      end
-    end
-
-  end
-
 -- ECHO
-  if evt.field(containername) ~="host" and evt.field(evtisio) == true and evt.field(evtdir) == "<"  and evt.field(evtrawres) > 0 then
+  if evt.field(evtisio) == true and evt.field(evtdir) == "<"  and evt.field(evtrawres) > 0 then
     local buf_echo = evt.field(fbuf)
     local isread_echo = evt.field(fisread)
     local res_echo = evt.field(fres)
@@ -414,16 +570,6 @@ function on_event()
     --print(infostr)
   end
 
--- Net Slower
-  if (evt.field(fdtype) == "ipv4" or evt.field(fdtype) == "ipv6") and evt.field(evtisio) == true then
-    lat = evt.field(latency) / 1000000
-    fn = evt.field(fdname)
-    if evt.field(evtdir) == "<" then
-      netslower = "NetSlower    " .. string.format("%-20.20s %-20.20s %-12.12s %-8s %12d %s",
-        evt.field(fcontainerid),evt.field(containername),evt.field(fpname),evt.field(eventtype),lat,fn)
-    end
-  end
-
 -- Http Request
   if evt.field(evtisio) == true and (evt.field(fdsockfamily) == "ip" or evt.field(fdsockfamily) == "unix") then
     local evtbuflen_value = evt.field(evtbuflen)
@@ -432,73 +578,6 @@ function on_event()
     end
   end
 
--- Host Mysql
-  if (evt.field(fdsport)==3306 or evt.field(fpname)=="mysql") and evt.field(evtisio)==true and evt.field(eventtype)=="write" then
-    local data = evt.field(data)
-    local line = split(data, " ")
-    local op = string.lower(line[1])
-    if line[1] == ".....select" then
-          local method = string.sub(op , 6,-1)
-          local content = "select" .. string.sub(data , 12,-1)
-          query = method .. ":" .. content
-          print("Mysql   " .. string.format("%-20.20s %-20.20s %-23.23s %-20s %s",
-      evt.field(fcontainerid),evt.field(containername),method,format_time_interval(evt.field(latency)),content))
-    end
-
-    if line[1] == "!....insert" then
-          local method = string.sub(op , 6,-1)
-          local content = "insert" .. string.sub(data , 12,-1)
-          query = method .. ":" .. content
-          print("Mysql   " .. string.format("%-20.20s %-20.20s %-23.23s %-20s %s",
-      evt.field(fcontainerid),evt.field(containername),method,format_time_interval(evt.field(latency)),content))
-    end
-
-    if line[1] == ".....update" then
-          local method = string.sub(op , 6,-1)
-          local content = "update" .. string.sub(data , 12,-1)
-          query = method .. ":" .. content
-          print("Mysql   " .. string.format("%-20.20s %-20.20s %-23.23s %-20s %s",
-      evt.field(fcontainerid),evt.field(containername),method,format_time_interval(evt.field(latency)),content))
-    end
-
-    if line[1] == ".....delete" then
-          local method = string.sub(op , 6,-1)
-          local content = "delete" .. string.sub(data , 12,-1)
-          query = method .. ":" .. content
-          print("Mysql   " .. string.format("%-20.20s %-20.20s %-23.23s %-20s %s",
-      evt.field(fcontainerid),evt.field(containername),method,format_time_interval(evt.field(latency)),content))
-    end
-  end
-
--- Host Redis
-  if (evt.field(fdsport)==6379 or evt.field(fpname)=="redis-server") and evt.field(evtisio)==true and evt.field(eventtype)=="write" then
-    local data = evt.field(data)
-    local op = string.sub(data , 1,11)
-    if op == "*2..$4..key" then
-          method = "key"
-          local content = string.sub(data , 18, -1)
-          print("Redis   " .. string.format("%-20.20s %-20.20s %-23.23s %-20s %s",
-      evt.field(fcontainerid),evt.field(containername),method,format_time_interval(evt.field(latency)),content))
-    end
-     if op == "*2..$3..get" then
-          method = "get"
-          local content = string.sub(data , 18, -1)
-          print("Redis   " .. string.format("%-20.20s %-20.20s %-23.23s %-20s %s",
-      evt.field(fcontainerid),evt.field(containername),method,format_time_interval(evt.field(latency)),content))
-    end
-     if op == "*3..$3..set" then
-          method = "set"
-          local content = string.sub(data , 18, -1)
-          print("Redis   " .. string.format("%-20.20s %-20.20s %-23.23s %-20s %s",
-      evt.field(fcontainerid),evt.field(containername),method,format_time_interval(evt.field(latency)),content))
-    end
-     if op == "*3..$6..exp" then
-          method = "expire"
-          local content = string.sub(data , 21, -1)
-          print("Redis   " .. string.format("%-20.20s %-20.20s %-23.23s %-20s %s",
-      evt.field(fcontainerid),evt.field(containername),method,format_time_interval(evt.field(latency)),content))
-    end
-  end
 
   return true
 end
@@ -507,6 +586,14 @@ end
 function on_interval(ts_s, ts_ns, delta)
   
   print_sorted_table("TopContainersCpu", grtable, ts_s, 0, delta, vizinfo)
+
+  print_sorted_table("TopContainersMemory", grtable_memory, ts_s, 0, delta, vizinfo_memory)
+
+  print_sorted_table("TopContainersProcess", grtable_process, ts_s, 0, delta, vizinfo_process)
+
+  print_sorted_table("TopProcessMemory", grtable_process_memory, ts_s, 0, delta, vizinfo_process_memory)
+
+  print_sorted_table("TopContainersThread", grtable_thread, ts_s, 0, delta, vizinfo_thread)
   
   print_sorted_table("TopContainersNet", grtable_net, ts_s, 0, delta, vizinfo_net)
 
@@ -527,6 +614,10 @@ function on_interval(ts_s, ts_ns, delta)
 
   -- Clear the table
   grtable = {}
+  grtable_memory = {}
+  grtable_process = {}
+  grtable_process_memory = {}
+  grtable_thread = {}
   grtable_net = {}
   grtable_file = {}
   grtable_errors = {}
