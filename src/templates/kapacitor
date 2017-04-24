@@ -1,0 +1,41 @@
+kapacitor define \
+    -name cpu_alert \
+    -type stream \
+    -tick cpu_alert.tick \
+    -dbrp sysdig.default
+
+
+    stream
+.from().measurement('Cpu')
+    .alert()
+        .crit(lambda: "value" <  100)
+.stateChangesOnly()
+.log('/tmp/alerts.log')
+
+
+
+
+
+
+
+
+
+
+kapacitor define \
+    -name memory_alert \
+    -type stream \
+    -tick memory_alert.tick \
+    -dbrp sysdig.default
+
+stream
+.from().measurement('HttpRequestSpent')
+.where(lambda: "containername" == 'nginx')
+	.window()
+            .period(2m)
+            .every(1m)
+    .alert()
+        .info("")
+        .warn("")
+        .crit(lambda: "value" > 0)
+	.stateChangesOnly()
+.log('/tmp/alerts.log')

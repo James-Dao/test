@@ -1,0 +1,26 @@
+
+TopContainersCpu:   /TopContainersCpu\/*/
+
+
+select CPU, Process, User, ThreadCount, Host_Pid, Thread_ID, Container_Pid, Virt, Res, CpuNo, ContainerId, ContainerName from TopContainersCpu limit 10;
+
+
+
+TopContainersNet:   /TopContainersNet\/*/
+
+select Bytes, Connection, Process, Host_Pid, Container_Pid, Server_Port, Protoco, IOPS, ContainerId, ContainerName from TopContainersNet limit 10;
+
+
+TopContainersFile:  /TopContainersFile\/*/
+
+select Bytes, Process, Host_Pid, Container_Pid, ContainerId, ContainerName from TopContainersFile limit 10;
+
+
+TopFdCount:   /TopFdCount\/*/
+
+select Process, Host_pid, Container_pid, Max, PCT, Container.id, Container.name, Command from TopFdCount limit 10;
+
+
+TopHttpRequest:    /TopHttpRequest\/*/
+
+select Bytes, Spend_Time, Host_Pid, Connection, HttpMethod, Url, ContainerId, ContainerName from TopHttpRequest limit 10;
