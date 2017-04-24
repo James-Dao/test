@@ -32,4 +32,3 @@ dockermetrics:
  restart: always
  privileged: true
  container_name: "dockermetrics"
-
