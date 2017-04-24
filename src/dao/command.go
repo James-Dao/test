@@ -38,7 +38,8 @@ func (i *CommandService) Run() error {
 		fmt.Errorf(fmt.Sprintf("Run  input.Start(): [ %s ] ", err))
 		return err
 	}
-	input_reader := bufio.NewReader(input_pipe)
+	// input_reader := bufio.NewReader(input_pipe)
+	input_reader := bufio.NewReaderSize(input_pipe, 10)
 	scanner := bufio.NewScanner(input_reader)
 	for scanner.Scan() {
 		line := string(scanner.Bytes())
