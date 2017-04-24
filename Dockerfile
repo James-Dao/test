@@ -28,7 +28,7 @@ ENV GOPATH /gopath/app
 ADD . /gopath/app/
 RUN go install dockermetrics
 RUN cp /gopath/app/src/templates/* /gopath/app/bin/
-RUN rm -fr /gopath/app/src
+#RUN rm -fr /gopath/app/src
 ENV TZ Asia/Shanghai
 EXPOSE 8080
 WORKDIR /gopath/app/bin
