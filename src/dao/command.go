@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"config"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"logger"
 	"model"
 	"os/exec"
@@ -14,7 +15,6 @@ import (
 
 type CommandService struct {
 	conf           *config.Config
-	logger         logger.Logger
 	bufferDuration time.Duration
 	lastWrite      time.Time
 	lock           sync.Mutex
@@ -22,10 +22,9 @@ type CommandService struct {
 	points         []*model.Command
 }
 
-func NewCommandService(conf *config.Config, logger logger.Logger) *CommandService {
+func NewCommandService(conf *config.Config) *CommandService {
 	i := &CommandService{
 		conf:           conf,
-		logger:         logger,
 		bufferDuration: time.Duration(60 * time.Second),
 		lastWrite:      time.Now(),
 		points:         make([]*model.Command, 0),
@@ -58,7 +57,7 @@ func (i *CommandService) Run() error {
 		commands := columes[3:]
 		command_string := strings.Join(commands, " ")
 		command := model.NewCommand(pid, commandtime, userandcontainername, command_string)
-		i.logger.Info(fmt.Sprintf("command:%+v", command))
+		log.Info(fmt.Sprintf("command:%+v", command))
 		if strings.Contains(userandcontainername, "@host") {
 			command.Level = "host"
 		} else {
@@ -80,9 +79,9 @@ func (i *CommandService) Run() error {
 	}
 	err = scanner.Err()
 	if err != nil {
-		i.logger.Error(fmt.Sprintf("read error"), err)
+		log.Error(fmt.Sprintf("read error"), err)
 	}
-	i.logger.Info("Exit Scanner")
+	log.Info("Exit Scanner")
 	return nil
 }
 

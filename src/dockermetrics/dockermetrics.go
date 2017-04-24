@@ -6,7 +6,6 @@ import (
 	"dao"
 	"flag"
 	"fmt"
-	"github.com/cloudfoundry/gosteno"
 	"github.com/codegangsta/cli"
 	"github.com/gin-gonic/gin"
 	"logger"
@@ -22,10 +21,9 @@ func main() {
 	app.Version = "1.0.0"
 	app.Flags = []cli.Flag{}
 	app.Action = func(c *cli.Context) {
-		logger, _, conf := loadLoggerAndConfig(c, "dockermetrics")
-		common.Logger = logger
+		conf := loadLoggerAndConfig(c, "dockermetrics")
 		flag.Parse()
-		CommandServiceInstance := dao.NewCommandService(conf, logger)
+		CommandServiceInstance := dao.NewCommandService(conf)
 		CommandServiceInstance.Run()
 		router := gin.Default()
 		router.GET("/ping", func(c *gin.Context) {
@@ -43,7 +41,7 @@ func main() {
 	app.Run(os.Args)
 }
 
-func loadLoggerAndConfig(c *cli.Context, component string) (logger.Logger, *gosteno.Logger, *config.Config) {
+func loadLoggerAndConfig(c *cli.Context, component string) *config.Config {
 	var conf *config.Config
 	var err error
 	conf, err = config.FromEnv()
@@ -51,9 +49,5 @@ func loadLoggerAndConfig(c *cli.Context, component string) (logger.Logger, *gost
 		fmt.Printf("Failed to load config from env : %s", err.Error())
 		os.Exit(1)
 	}
-	stenoConf := &gosteno.Config{Sinks: []gosteno.Sink{gosteno.NewIOSink(os.Stdout)}, Level: conf.LogLevel(), Codec: gosteno.NewJsonCodec()}
-	gosteno.Init(stenoConf)
-	steno := gosteno.NewLogger(component)
-	sysdigLogger := logger.NewRealLogger(steno)
-	return sysdigLogger, steno, conf
+	return conf
 }
