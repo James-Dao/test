@@ -51,6 +51,7 @@ func (i *CommandService) Run() error {
 	scanner := bufio.NewScanner(input_reader)
 	for scanner.Scan() {
 		line := string(scanner.Bytes())
+		log.Infof("line %s", line)
 		columes := strings.Split(line, " ")
 		pid := columes[0]
 		commandtime := columes[1]
