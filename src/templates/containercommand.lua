@@ -222,5 +222,5 @@ end
 
 -- Called by the engine at the end of the capture (Ctrl-C)
 function on_capture_end()
-  print(terminal.reset)
+  return true
 end
