@@ -5,6 +5,7 @@ import (
 	"dao"
 	"flag"
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -19,8 +20,10 @@ func main() {
 	app.Version = "1.0.0"
 	app.Flags = []cli.Flag{}
 	app.Action = func(c *cli.Context) {
+		log.Infof("%s", "starting")
 		conf := loadLoggerAndConfig(c, "dockermetrics")
 		flag.Parse()
+		log.Infof("%s", "running")
 		CommandServiceInstance := dao.NewCommandService(conf)
 		CommandServiceInstance.Run()
 		router := gin.Default()
