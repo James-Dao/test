@@ -35,7 +35,7 @@ func NewCommandService(conf *config.Config, logger logger.Logger) *CommandServic
 }
 
 func (i *CommandService) Run() error {
-	cmd := "sysdig -pc -c containercommand | awk '{for(i=1;i<=NF;i++) printf\"%s \",$i} {print \"\"}'"
+	cmd := "sysdig -pc -c /gopath/app/bin/containercommand | awk '{for(i=1;i<=NF;i++) printf\"%s \",$i} {print \"\"}'"
 	input := exec.Command("/bin/sh", "-c", cmd)
 	input_pipe, err := input.StdoutPipe()
 	if err != nil {
