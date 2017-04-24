@@ -50,7 +50,7 @@ func (i *CommandService) Run() error {
 		commands := columes[3:]
 		command_string := strings.Join(commands, " ")
 		command := model.NewCommand(pid, commandtime, userandcontainername, command_string)
-		log.Info(fmt.Sprintf("command:%+v", command))
+		// log.Info(fmt.Sprintf("command:%+v", command))
 		if strings.Contains(userandcontainername, "@host") {
 			command.Level = "host"
 		} else {
