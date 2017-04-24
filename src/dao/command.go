@@ -5,7 +5,6 @@ import (
 	"config"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
-	"logger"
 	"model"
 	"os/exec"
 	"strings"
