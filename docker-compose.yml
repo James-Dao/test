@@ -1,5 +1,5 @@
 dockermetrics:
- image: daocloud.io/jamesxiong/dockermetrics
+ image: daocloud.io/jamesxiong/test
  ports:
   - "8686:8080"
  volumes:
