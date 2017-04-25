@@ -2,12 +2,13 @@ package dao
 
 import (
 	"bufio"
+	"bytes"
 	"config"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"model"
 	"os/exec"
-	"strings"
+	//"strings"
 )
 
 type CommandService struct {
@@ -38,31 +39,47 @@ func (i *CommandService) Run() error {
 		fmt.Errorf(fmt.Sprintf("Run  input.Start(): [ %s ] ", err))
 		return err
 	}
-	// input_reader := bufio.NewReader(input_pipe)
-	input_reader := bufio.NewReaderSize(input_pipe, 10)
-	scanner := bufio.NewScanner(input_reader)
-	for scanner.Scan() {
-		line := string(scanner.Bytes())
-		log.Infof("line %s", line)
-		columes := strings.Split(line, " ")
-		pid := columes[0]
-		commandtime := columes[1]
-		userandcontainername := columes[2]
-		commands := columes[3:]
-		command_string := strings.Join(commands, " ")
-		command := model.NewCommand(pid, commandtime, userandcontainername, command_string)
-		// log.Info(fmt.Sprintf("command:%+v", command))
-		if strings.Contains(userandcontainername, "@host") {
-			command.Level = "host"
-		} else {
-			command.Level = "container"
-			i.points = append(i.points, command)
+	input_reader := bufio.NewReader(input_pipe)
+	// input_reader := bufio.NewReaderSize(input_pipe, 10)
+	var jsonBuf bytes.Buffer
+	for {
+
+		line, isPrefix, err := input_reader.ReadLine()
+		if len(line) > 0 {
+			jsonBuf.Write(line)
+			if !isPrefix {
+				line := string(jsonBuf.Bytes())
+				log.Infof("line %s", line)
+				jsonBuf.Reset()
+			}
+		}
+		if err != nil {
+			break
 		}
 	}
-	err = scanner.Err()
-	if err != nil {
-		log.Error(fmt.Sprintf("read error"), err)
-	}
+	// scanner := bufio.NewScanner(input_reader)
+	// for scanner.Scan() {
+	// 	line := string(scanner.Bytes())
+	// 	log.Infof("line %s", line)
+	// 	columes := strings.Split(line, " ")
+	// 	pid := columes[0]
+	// 	commandtime := columes[1]
+	// 	userandcontainername := columes[2]
+	// 	commands := columes[3:]
+	// 	command_string := strings.Join(commands, " ")
+	// 	command := model.NewCommand(pid, commandtime, userandcontainername, command_string)
+	// 	// log.Info(fmt.Sprintf("command:%+v", command))
+	// 	if strings.Contains(userandcontainername, "@host") {
+	// 		command.Level = "host"
+	// 	} else {
+	// 		command.Level = "container"
+	// 		i.points = append(i.points, command)
+	// 	}
+	// }
+	// err = scanner.Err()
+	// if err != nil {
+	// 	log.Error(fmt.Sprintf("read error"), err)
+	// }
 	log.Info("Exit Scanner")
 	return nil
 }
