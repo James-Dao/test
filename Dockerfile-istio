@@ -1,1 +1,1 @@
-F docker.io/maistra/examples-bookinfo-reviews-v1:0.12.0
+FROM docker.io/maistra/examples-bookinfo-reviews-v1:0.12.0
